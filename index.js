@@ -29,6 +29,8 @@ const appPrompts = {
     addDept: "Add Department",
     addRole: "Add Role",
     addEmployee: "Add Employee",
+    rmvDept: "Remove Department",
+    rmvRole: "Remove Role",
     rmvEmployee: "Remove Employee",
     updateEmRole: "Update Employee Role",
     updateEmManager: "Update Employee Manager",
@@ -51,6 +53,8 @@ function prompt() {
                 appPrompts.addDept,
                 appPrompts.addRole,
                 appPrompts.addEmployee,
+                appPrompts.rmvDept,
+                appPrompts.rmvRole,
                 appPrompts.rmvEmployee,
                 appPrompts.updateEmRole,
                 appPrompts.updateEmManager,
@@ -84,6 +88,12 @@ function prompt() {
                 case appPrompts.addEmployee:
                     addEmployee();
                     break;
+                case appPrompts.rmvDept:
+                        rmvDept();
+                        break;
+                case appPrompts.rmvRole:
+                        rmvRole();
+                        break;
                 case appPrompts.rmvEmployee:
                     rmvEmployee();
                     break;
@@ -178,11 +188,79 @@ function emByManager() {
     });
 }
 function addDept() {
+    inquirer.prompt([
+        {
+            name: 'addDept',
+            type: "input",
+            message: "What department would you like to add?",
+            validate: addDept => {
+                if(addDept) {
+                    return true;
+                } else {
+                    console.log('Please enter a department.');
+                    return false;
+                }
+            }
+        }
+    ])
+        .then(answer => {
+            connection.query(`INSERT INTO department (name) VALUES (?)`, answer.addDept, (err,data) => {
+                if (err) throw err;
+                console.log(`Added ${answer.addDept} to departments.`)
+                allDepts();
+            });
 
+        })
 }
 function addRole() {
-
-}
+    // Creates an array of all departments
+    const departments = [];
+    connection.query("SELECT * FROM DEPARTMENT", (err, data) => {
+      if (err) throw err;
+  
+      data.forEach(dept => {
+        let deptObj = {
+          name: dept.name,
+          value: dept.id
+        }
+        departments.push(deptObj);
+      });
+  
+      //question list to get arguments for making new roles
+      let questions = [
+        {
+          type: "input",
+          name: "title",
+          message: "What is the title of this role?"
+        },
+        {
+          type: "input",
+          name: "salary",
+          message: "What is the salary of this role?"
+        },
+        {
+          type: "list",
+          name: "department",
+          choices: departments,
+          message: "Which department does this role belong to?"
+        }
+      ];
+  
+      inquirer.prompt(questions)
+      .then(answer => {
+        const query = `INSERT INTO ROLE (title, salary, department_id) VALUES (?)`;
+        connection.query(query, [[answer.title, answer.salary, answer.department]], (err, res) => {
+          if (err) throw err;
+          console.log(`Successfully added ${answer.title} role.`);
+          allRoles();
+        });
+      })
+      .catch(err => {
+        console.error(err);
+      });
+    });
+  }
+  
 async function addEmployee() {
     const addName = await inquirer.prompt(getName());
     connection.query('SELECT role.id, role.title FROM role ORDER BY role.id;', async(err, data) => {
@@ -246,14 +324,116 @@ async function addEmployee() {
             })
     })
 }
-function rmvEmployee() {
-
+async function rmvEmployee() {
+    const answer = await inquirer.prompt([
+        {
+            name: "id",
+            type: "input",
+            message: "Enter the ID of the employee you want to remove. "
+        }
+    ]);
+    connection.query(`DELETE FROM employee WHERE ?`,
+    {
+        id: answer.id
+    },
+    (err, data) => {
+        if (err) throw err;
+        }
+    )
+    console.log("The employee has been removed from the database.");
+    prompt();
 }
-function updateEmRole() {
-
+async function rmvRole() {
+    const answer = await inquirer.prompt([
+        {
+            name: "role",
+            type: "input",
+            message: "Enter the ID number of the role you want to remove. "
+        }
+    ]);
+    connection.query(`DELETE FROM role WHERE ?`,
+    {
+        id: answer.role
+    },
+    (err, data) => {
+        if (err) throw err;
+        }
+    )
+    console.log("The role has been removed from the database.");
+    prompt();
 }
-function updateEmManager() {
+async function rmvDept() {
+    const answer = await inquirer.prompt([
+        {
+            name: "dept",
+            type: "input",
+            message: "Enter the department you want to remove. "
+        }
+    ]);
+    connection.query(`DELETE FROM department WHERE ?`,
+    {
+        id: answer.dept
+    },
+    (err, data) => {
+        if (err) throw err;
+        }
+    )
+    console.log("The department has been removed from the database.");
+    prompt();
+}
+async function updateEmRole() {
+    const employeeId = await inquirer.prompt(getId());
 
+    connection.query(`SELECT role.id, role.title FROM role ORDER BY role.id;`, async (err, data) => {
+        if(err) throw err;
+        const {role} = await inquirer.prompt([
+            {
+                name: "role",
+                type: "list",
+                choices: () => data.map(data => data.title),
+                message: "What is the new role for this employee? "
+            }
+        ]);
+        let roleId;
+        for (const row of data) {
+            if(row.title === role) {
+                roleId = row.id;
+                continue;
+            }
+        }
+        connection.query(`UPDATE employee SET role_id = ${employeeId.id} WHERE employee.id = ${employeeId.id}` , async (err, res) => {
+            if(err) throw err;
+            console.log("Employee's role has been updated.");
+            prompt();
+        })
+    })
+}
+async function updateEmManager() {
+    const employeeId = await inquirer.prompt(getId());
+
+    connection.query(`SELECT manager.id, CONCAT(manager.first_name, ' ', manager.last_name) AS manager FROM employee ORDER BY manager;`, async (err, data) => {
+        if(err) throw err;
+        const {manager} = await inquirer.prompt([
+            {
+                name: "manager",
+                type: "list",
+                choices: () => data.map(data => data.title),
+                message: "Who is the new manager for this employee? "
+            }
+        ]);
+        let managerId;
+        for (const row of data) {
+            if(row.title === role) {
+                managerId = row.id;
+                continue;
+            }
+        }
+        connection.query(`UPDATE employee SET manager_id = ${employeeId.id} WHERE employee.id = ${employeeId.id}` , async (err, res) => {
+            if(err) throw err;
+            console.log("Employee's manager has been updated.");
+            prompt();
+        })
+    })
 }
 
 function getName() {
@@ -270,4 +450,14 @@ function getName() {
                 message: "Enter the last name: "
             }
         ]);
+}
+
+function getId() {
+    return ([
+        {
+            name: "id",
+            type: "input",
+            message: "What is the employee's ID?:  "
+        }
+    ]);
 }
