@@ -94,20 +94,42 @@ function prompt() {
                     updateEmManager();
                     break;
                 case appPrompts.exit:
-                    connection.end;
+                    connection.end();
                     break;
             }
         });
     }
     
 function allDepts() {
-
+    const query = `SELECT department.id, department.name FROM department ORDER BY department.id;`
+    connection.query(query, (err, data) => {
+        if(err) throw err;
+        console.log('\n ------------------------------');
+        console.log(`     VIEW ALL DEPARTMENTS`);
+        console.log('\n ------------------------------');
+        console.table(data);
+        prompt();
+    });
 }
 function allRoles() {
 
 }
 function allEmployees() {
+    const query = `SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department, role.salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager
+    FROM employee
+    LEFT JOIN employee manager on manager.id = employee.manager_id
+    INNER JOIN role ON (role.id = employee.role_id)
+    INNER JOIN department oN (department.id = role.department_id)
+    ORDER BY employee.id;`
 
+    connection.query(query, (err, data) => {
+        if(err) throw err;
+        console.log('\n ------------------------------');
+        console.log('VIEW ALL EMPLOYEES');
+        console.log('\n ------------------------------');
+        console.table(data);
+        prompt();
+    });
 }
 function emByDept() {
 
