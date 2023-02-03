@@ -33,7 +33,6 @@ const appPrompts = {
     rmvRole: "Remove Role",
     rmvEmployee: "Remove Employee",
     updateEmRole: "Update Employee Role",
-    updateEmManager: "Update Employee Manager",
     exit: "Exit"
 };
 
@@ -57,10 +56,9 @@ function prompt() {
                 appPrompts.rmvRole,
                 appPrompts.rmvEmployee,
                 appPrompts.updateEmRole,
-                appPrompts.updateEmManager,
                 appPrompts.exit
             ]
-        })
+        }) // Whatever the user chooses to do runs the correlating function
         .then(answer => {
             console.log('answer', answer);
             switch (answer.action) {
@@ -100,9 +98,6 @@ function prompt() {
                 case appPrompts.updateEmRole:
                     updateEmRole();
                     break;
-                case appPrompts.updateEmManager:
-                    updateEmManager();
-                    break;
                 case appPrompts.exit:
                     connection.end();
                     break;
@@ -110,7 +105,7 @@ function prompt() {
         });
     }
     
-function allDepts() {
+function allDepts() { // Chooses department info from the department table and displays it in order by department id
     const query = `SELECT department.id, department.name FROM department ORDER BY department.id;`
     connection.query(query, (err, data) => {
         if(err) throw err;
@@ -121,10 +116,10 @@ function allDepts() {
         prompt();
     });
 }
-function allRoles() {
+function allRoles() { // Chooses role info from the role table while simplifying the department name, joins the two records with matching values, and orders the info by role id #
     const query = `SELECT role.id, role.title, department.name AS department, role.salary 
     FROM role 
-    INNER JOIN department ON (department.id = role.department_id)
+    INNER JOIN department ON (department.id = role.department_id) 
     ORDER BY role.id;
     `
 
@@ -137,7 +132,7 @@ function allRoles() {
         prompt();
     });
 }
-function allEmployees() {
+function allEmployees() { // Chooses employee info from the employee table, joins the employee and the matching records from the manager table, consolidates role ID and department ID, and orders by employee ID number
     const query = `SELECT employee.id, employee.first_name, employee.last_name, role.title, department.name AS department, role.salary, CONCAT(manager.first_name, ' ', manager.last_name) AS manager
     FROM employee
     LEFT JOIN employee manager on manager.id = employee.manager_id
@@ -285,12 +280,12 @@ async function addEmployee() {
                 if (err) throw err;
                 let choices = data.map(data => `${data.first_name} ${data.last_name}`);
                 choices.push('none');
-                let { manager } = await inquirer.prompt([
+                let {manager} = await inquirer.prompt([
                     {
                         name: 'manager',
                         type: 'list',
                         choices: choices,
-                        message: 'Choose the employee Manager: '
+                        message: "Choose the employee's Manager: "
                     }
                 ]);
                 let managerID;
@@ -341,7 +336,7 @@ async function rmvEmployee() {
         }
     )
     console.log("The employee has been removed from the database.");
-    prompt();
+    allEmployees();
 }
 async function rmvRole() {
     const answer = await inquirer.prompt([
@@ -360,14 +355,14 @@ async function rmvRole() {
         }
     )
     console.log("The role has been removed from the database.");
-    prompt();
+    allRoles();
 }
 async function rmvDept() {
     const answer = await inquirer.prompt([
         {
             name: "dept",
             type: "input",
-            message: "Enter the department you want to remove. "
+            message: "Enter the department ID you want to remove. "
         }
     ]);
     connection.query(`DELETE FROM department WHERE ?`,
@@ -379,7 +374,7 @@ async function rmvDept() {
         }
     )
     console.log("The department has been removed from the database.");
-    prompt();
+    allDepts();
 }
 async function updateEmRole() {
     const employeeId = await inquirer.prompt(getId());
@@ -401,37 +396,10 @@ async function updateEmRole() {
                 continue;
             }
         }
-        connection.query(`UPDATE employee SET role_id = ${employeeId.id} WHERE employee.id = ${employeeId.id}` , async (err, res) => {
+        connection.query(`UPDATE employee SET role_id = ${roleId} WHERE employee.id = ${employeeId.name}` , async (err, res) => {
             if(err) throw err;
             console.log("Employee's role has been updated.");
-            prompt();
-        })
-    })
-}
-async function updateEmManager() {
-    const employeeId = await inquirer.prompt(getId());
-
-    connection.query(`SELECT manager.id, CONCAT(manager.first_name, ' ', manager.last_name) AS manager FROM employee ORDER BY manager;`, async (err, data) => {
-        if(err) throw err;
-        const {manager} = await inquirer.prompt([
-            {
-                name: "manager",
-                type: "list",
-                choices: () => data.map(data => data.title),
-                message: "Who is the new manager for this employee? "
-            }
-        ]);
-        let managerId;
-        for (const row of data) {
-            if(row.title === role) {
-                managerId = row.id;
-                continue;
-            }
-        }
-        connection.query(`UPDATE employee SET manager_id = ${employeeId.id} WHERE employee.id = ${employeeId.id}` , async (err, res) => {
-            if(err) throw err;
-            console.log("Employee's manager has been updated.");
-            prompt();
+            allEmployees();
         })
     })
 }
@@ -455,7 +423,7 @@ function getName() {
 function getId() {
     return ([
         {
-            name: "id",
+            name: "name",
             type: "input",
             message: "What is the employee's ID?:  "
         }

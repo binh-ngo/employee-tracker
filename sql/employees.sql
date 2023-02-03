@@ -57,5 +57,5 @@ VALUES
     ('Anthony', 'Bourdain', 6, NULL),
     ('Kyle', 'Connaughton', 7, 6),
     ('Andrew', 'Zimmern', 8, NULL),
-    ('Paula', 'Deen', 9, 8);
+    ('Paula', 'Deen', 9, 8),
 
