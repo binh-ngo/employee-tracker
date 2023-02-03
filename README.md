@@ -6,6 +6,8 @@
   
 ![badge](https://img.shields.io/badge/license-MITLicense-blue)
 
+![Demo](./assets/Untitled_%20Feb%202%2C%202023%204_09%20PM.mp4)
+
 ## Table of Contents
   * [Installation](#installation)
   * [Questions](#questions)
